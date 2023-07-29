@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data Visualization</title>
+    <link href="style.css">
   </head>
   <body>
     <div id="container"></div>
@@ -11,106 +12,79 @@
   <script type="module">
     import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-    var myData =
-      "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json?authuser=0";
+    // Specify the chart dimensions and margins.
+    const width = 1800;
+    const height = 900;
+    const marginTop = 30;
+    const marginRight = 0;
+    const marginBottom = 30;
+    const marginLeft = 80;
 
-    
-
-
-
-    function graf() {
-      // Specify the chart dimensions and margins. The width is determined by Observable’s stdlib,
-      // making it reactive when the window is resized. The total width of the chart is computed
-      // as 6 times the window width.
-      d3.json(
+    d3.json(
       "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json?authuser=0"
-    )
-    
-      const width = 720;
-      const height = 420;
-      const marginTop = 20;
-      const marginRight = 20;
-      const marginBottom = 30;
-      const marginLeft = 30;
+    ).then((response) => {
+      const data = response.data;
 
-      // Create the horizontal (x) scale over the total width.
+      // Sort the data based on frequency in descending order.
+      data.sort((a, b) => b[1] - a[1]); // Swap index 0 with index 1
+
+      // Declare the x (horizontal position) scale.
       const x = d3
-        .scaleUtc()
-        .domain(d3.extent(data, (d) => d.date))
-        .range([marginLeft, totalWidth - marginRight]);
+        .scaleBand()
+        .domain(data.map((d) => d[0])) // Swap index 1 with index 0
+        .range([marginLeft, width - marginRight])
+        .padding(0.1);
 
-      // Create the vertical (x) scale.
+      // Declare the y (vertical position) scale.
       const y = d3
         .scaleLinear()
-        .domain([0, d3.max(data, (d) => d.close)])
-        .nice(6)
+        .domain([0, d3.max(data, (d) => d[1])]) // Swap index 0 with index 1
         .range([height - marginBottom, marginTop]);
 
-      // Define an area shape generator.
-      const area = d3
-        .area()
-        .curve(d3.curveStep)
-        .x((d) => x(d.date))
-        .y0(y(0))
-        .y1((d) => y(d.close));
-
-      // Create a div that holds two svg elements: one for the main chart and horizontal axis,
-      // which moves as the user scrolls the content; the other for the vertical axis (which
-      // doesn’t scroll).
-      const parent = d3.create("div");
-
-      // Create the svg with the vertical axis.
-      parent
-        .append("svg")
+      // Create the SVG container.
+      const svg = d3
+        .create("svg")
         .attr("width", width)
         .attr("height", height)
-        .style("position", "absolute")
-        .style("pointer-events", "none")
-        .style("z-index", 1)
+        .attr("viewBox", [0, 0, width, height])
+        .attr("style", "max-width: 100%; height: auto;");
+
+      // Add a rect for each bar.
+      svg
         .append("g")
-        .attr("transform", `translate(${marginLeft},0)`)
-        .call(d3.axisLeft(y).ticks(6))
-        .call((g) => g.select(".domain").remove())
-        .call((g) =>
-          g
-            .select(".tick:last-of-type text")
-            .clone()
-            .attr("x", 3)
-            .attr("text-anchor", "start")
-            .attr("font-weight", "bold")
-            .text("$ Close")
-        );
+        .attr("fill", "steelblue")
+        .selectAll()
+        .data(data)
+        .join("rect")
+        .attr("x", (d) => x(d[0])) // Swap index 1 with index 0
+        .attr("y", (d) => y(d[1])) // Swap index 0 with index 1
+        .attr("height", (d) => y(0) - y(d[1])) // Swap index 0 with index 1
+        .attr("width", x.bandwidth());
 
-      // Create a scrolling div containing the area shape and the horizontal axis.
-      const body = parent
-        .append("div")
-        .style("overflow-x", "scroll")
-        .style("-webkit-overflow-scrolling", "touch");
-
-      const svg = body
-        .append("svg")
-        .attr("width", totalWidth)
-        .attr("height", height)
-        .style("display", "block");
-
+      // Add the x-axis and label.
       svg
         .append("g")
         .attr("transform", `translate(0,${height - marginBottom})`)
-        .call(
-          d3
-            .axisBottom(x)
-            .ticks(d3.utcMonth.every(1200 / width))
-            .tickSizeOuter(0)
+        .call(d3.axisBottom(x).tickSizeOuter(0));
+
+      // Add the y-axis and label, and remove the domain line.
+      svg
+        .append("g")
+        .attr("transform", `translate(${marginLeft},0)`)
+        .call(d3.axisLeft(y).tickFormat((y) => (y * 100).toFixed()))
+        .call((g) => g.select(".domain").remove())
+        .call((g) =>
+          g
+            .append("text")
+            .attr("x", -marginLeft)
+            .attr("y", 10)
+            .attr("fill", "currentColor")
+            .attr("text-anchor", "start")
+            .text("GPD Info")
         );
 
-      svg.append("path").datum(data).attr("fill", "steelblue").attr("d", area);
-
-
-      // Initialize the scroll offset after yielding the chart to the DOM.
-      body.node().scrollBy(totalWidth, 0);
-    }
-
-    graf()
-
+      // Append the SVG to the container element.
+      document.getElementById("container").appendChild(svg.node());
+    });
   </script>
 </html>
