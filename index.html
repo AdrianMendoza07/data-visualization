@@ -4,11 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data Visualization</title>
-    <link href="style.css">
+    <link type="stylesheet" href="style.css">
   </head>
   <body>
     <div id="container"></div>
   </body>
+  <style>
+    body{
+    background-color: gray
+  }
+  </style>
   <script type="module">
     import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
@@ -26,7 +31,6 @@
       const data = response.data;
 
       // Sort the data based on frequency in descending order.
-      data.sort((a, b) => b[1] - a[1]); // Swap index 0 with index 1
 
       // Declare the x (horizontal position) scale.
       const x = d3
@@ -52,11 +56,11 @@
       // Add a rect for each bar.
       svg
         .append("g")
-        .attr("fill", "steelblue")
+        .attr("fill", "black")
         .selectAll()
         .data(data)
         .join("rect")
-        .attr("x", (d) => x(d[0])) // Swap index 1 with index 0
+        .attr("x", (d) => x(d[0])) // Swap index 1 with index 
         .attr("y", (d) => y(d[1])) // Swap index 0 with index 1
         .attr("height", (d) => y(0) - y(d[1])) // Swap index 0 with index 1
         .attr("width", x.bandwidth());
@@ -65,7 +69,8 @@
       svg
         .append("g")
         .attr("transform", `translate(0,${height - marginBottom})`)
-        .call(d3.axisBottom(x).tickSizeOuter(0));
+        .call(d3.axisBottom(x).tickSizeOuter(0))
+        .attr("transorm", "180")
 
       // Add the y-axis and label, and remove the domain line.
       svg
@@ -80,7 +85,8 @@
             .attr("y", 10)
             .attr("fill", "currentColor")
             .attr("text-anchor", "start")
-            .text("GPD Info")
+            .attr("translate" , "180")
+            .text("American GPD ")
         );
 
       // Append the SVG to the container element.
