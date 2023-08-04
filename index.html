@@ -1,96 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Data Visualization</title>
-    <link type="stylesheet" href="style.css">
-  </head>
-  <body>
-    <div id="container"></div>
-  </body>
+<head>
+  <title>PIB Estados Unidos</title>
+  <meta charset="UTF-8">
+  <meta name="author" content="Adrian">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="keywords" content="HTML, CSS, JavaScript">
+</head>
+<body>
+  <div id="container"></div>
   <style>
-    body{
-    background-color: gray
-  }
+    .html {
+      background-color: gray;
+    }
+    .tick text {
+      font-size: 7.5px;
+    }
   </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script type="module">
-    import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+    const width = 800;
+    const height = 400;
+    const marginTop = 20;
+    const marginBottom = 60; 
+    const marginLeft = 60;
+    const marginRight = 40;
+    const hoverColor = 'blue'; 
+    const staticColor = 'black'; 
 
-    // Specify the chart dimensions and margins.
-    const width = 1800;
-    const height = 900;
-    const marginTop = 30;
-    const marginRight = 0;
-    const marginBottom = 30;
-    const marginLeft = 80;
+    
+    fetch("https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json?authuser=0")
+      .then(response => response.json())
+      .then(response => {
+        const data = response.data;
 
-    d3.json(
-      "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json?authuser=0"
-    ).then((response) => {
-      const data = response.data;
+        
+        const x = d3
+          .scaleBand()
+          .domain(data.map((d) => d[0]))
+          .range([marginLeft, width - marginRight])
+          .padding(0.1);
 
-      // Sort the data based on frequency in descending order.
+        const y = d3
+          .scaleLinear()
+          .domain([0, d3.max(data, (d) => d[1])])
+          .nice()
+          .range([height - marginBottom, marginTop]);
 
-      // Declare the x (horizontal position) scale.
-      const x = d3
-        .scaleBand()
-        .domain(data.map((d) => d[0])) // Swap index 1 with index 0
-        .range([marginLeft, width - marginRight])
-        .padding(0.1);
+        const svg = d3.create("svg").attr("viewBox", [0, 0, width, height]);
 
-      // Declare the y (vertical position) scale.
-      const y = d3
-        .scaleLinear()
-        .domain([0, d3.max(data, (d) => d[1])]) // Swap index 0 with index 1
-        .range([height - marginBottom, marginTop]);
+        const rect = svg
+          .selectAll('rect')
+          .data(data)
+          .enter()
+          .append('rect')
+          .attr('fill', staticColor)
+          .attr('x', (d) => x(d[0]))
+          .attr('width', x.bandwidth())
+          .attr('y', y(0))
+          .attr('height', (d) => height - marginBottom - y(0))
+          .on('mouseover', function (d, i) {
+            d3.select(this).attr('fill', hoverColor);
+          })
+          .on('mousemove', function () {
+            tooltip
+              .style('top', d3.event.pageY - 10 + 'px')
+              .style('left', d3.event.pageX + 10 + 'px');
+          })
+          .on('mouseout', function () {
+            tooltip.html(``).style('visibility', 'hidden');
+            d3.select(this).attr('fill', staticColor);
+          });
 
-      // Create the SVG container.
-      const svg = d3
-        .create("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("viewBox", [0, 0, width, height])
-        .attr("style", "max-width: 100%; height: auto;");
+        rect
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(500)
+          .attr('y', (d) => y(d[1]))
+          .attr('height', (d) => height - marginBottom - y(d[1]))
+          .delay((d, i) => i * 2);
 
-      // Add a rect for each bar.
-      svg
-        .append("g")
-        .attr("fill", "black")
-        .selectAll()
-        .data(data)
-        .join("rect")
-        .attr("x", (d) => x(d[0])) // Swap index 1 with index 
-        .attr("y", (d) => y(d[1])) // Swap index 0 with index 1
-        .attr("height", (d) => y(0) - y(d[1])) // Swap index 0 with index 1
-        .attr("width", x.bandwidth());
+        
+        const tooltip = d3
+          .select('body')
+          .append('div')
+          .attr('class', 'd3-tooltip')
+          .style('position', 'absolute')
+          .style('z-index', '10')
+          .style('visibility', 'hidden')
+          .style('padding', '10px')
+          .style('background', 'rgba(0,0,0,0.6)')
+          .style('border-radius', '4px')
+          .style('color', '#fff')
+          .text('a simple tooltip');
 
-      // Add the x-axis and label.
-      svg
-        .append("g")
-        .attr("transform", `translate(0,${height - marginBottom})`)
-        .call(d3.axisBottom(x).tickSizeOuter(0))
-        .attr("transorm", "180")
+        
+        svg
+          .append('g')
+          .attr('transform', `translate(0, ${height - marginBottom})`)
+          .call(d3.axisBottom(x).tickValues(x.domain().filter((d, i) => i % 5 === 0)))
+          .selectAll('text')
+          .style('text-anchor', 'end')
+          .attr('transform', 'rotate(-45)');
 
-      // Add the y-axis and label, and remove the domain line.
-      svg
-        .append("g")
-        .attr("transform", `translate(${marginLeft},0)`)
-        .call(d3.axisLeft(y).tickFormat((y) => (y * 100).toFixed()))
-        .call((g) => g.select(".domain").remove())
-        .call((g) =>
-          g
-            .append("text")
-            .attr("x", -marginLeft)
-            .attr("y", 10)
-            .attr("fill", "currentColor")
-            .attr("text-anchor", "start")
-            .attr("translate" , "180")
-            .text("American GPD ")
-        );
+        
+        svg
+          .append('g')
+          .attr('transform', `translate(${marginLeft}, 0)`)
+          .call(d3.axisLeft(y));
 
-      // Append the SVG to the container element.
-      document.getElementById("container").appendChild(svg.node());
-    });
+        
+        svg
+          .append('text')
+          .attr('x', width / 2)
+          .attr('y', height - 5)
+          .style('text-anchor', 'middle')
+          .text('Años (1947 - 2015)');
+
+        
+        svg
+          .append('text')
+          .attr('x', -height / 2)
+          .attr('y', 20)
+          .style('text-anchor', 'middle')
+          .attr('transform', 'rotate(-90)')
+          .text('PIB (Miles de Millones de Dolares)');
+
+        document.getElementById('container').appendChild(svg.node());
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+      });
   </script>
+</body>
 </html>
